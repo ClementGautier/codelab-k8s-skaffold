@@ -1,0 +1,26 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2019-08-06T15:37:38Z",
+  "id": "k8s-skaffold",
+  "duration": 65,
+  "title": "Kubernetes ready microservices app with Skaffold",
+  "authors": "Clément Gautier",
+  "summary": "In this codelab, you'll build a web app composed of a very simple React frontend and a Python backend, deploy that application locally on a Kubernetes cluster and release a production ready package.",
+  "source": "1dO9xGCPKjKC_7K8wRAUyKzNNFM7BksABMIhm4p-A2lU",
+  "theme": "web",
+  "status": [
+    "draft"
+  ],
+  "category": [
+    "Web"
+  ],
+  "tags": [
+    "kiosk",
+    "web"
+  ],
+  "feedback": "https://github.com/ClementGautier/codelab-k8s-skaffold/issues",
+  "url": "k8s-skaffold"
+}

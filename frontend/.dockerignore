@@ -1,0 +1,5 @@
+chart/
+k8s/
+node_modules/
+.dockerignore
+Dockerfile*

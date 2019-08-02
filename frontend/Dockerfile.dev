@@ -1,0 +1,15 @@
+FROM node:alpine AS development
+
+ENV NODE_ENV=development
+ENV PORT=3000
+
+WORKDIR /usr/share/nginx/html
+
+COPY package*.json .
+COPY yarn.lock .
+
+RUN yarn install --silent
+
+COPY . .
+
+CMD yarn start

@@ -1,0 +1,73 @@
+apiVersion: skaffold/v1beta13
+kind: Config
+profiles:
+  - name: dev
+    build:
+      artifacts:
+      - image: k8s-skaffold-backend
+        context: backend
+        docker:
+          target: development
+        sync:
+          manual:
+          - src: src/*.py
+            dest: .
+
+      - image: k8s-skaffold-frontend
+        context: frontend
+        docker:
+          dockerfile: Dockerfile.dev
+        sync:
+          manual:
+          - src: src/components/*.js
+            dest: .
+
+    deploy:
+      kubectl:
+        manifests:
+          - backend/k8s/*.yaml
+          - frontend/k8s/*.yaml
+
+  - name: prod
+    build:
+      artifacts:
+      - image: k8s-skaffold-backend
+        context: backend
+      - image: k8s-skaffold-frontend
+        context: frontend
+
+    deploy:
+      helm:
+        releases:
+        - name: frontend
+          chartPath: frontend/chart
+          values:
+            image: k8s-skaffold-frontend
+          overrides:
+            backendUrl: http://k8s-skaffold-backend.local
+            service:
+              type: NodePort
+              port: 80
+            ingress:
+              enabled: true
+              annotations:
+                 ingress.kubernetes.io/rewrite-target: /
+              hosts:
+                - host: k8s-skaffold-frontend.local
+                  paths: [/]
+
+        - name: backend
+          chartPath: backend/chart
+          values:
+            image: k8s-skaffold-backend
+          overrides:
+            service:
+              type: NodePort
+              port: 80
+            ingress:
+              enabled: true
+              annotations:
+                 ingress.kubernetes.io/rewrite-target: /
+              hosts:
+                - host: k8s-skaffold-backend.local
+                  paths: [/]

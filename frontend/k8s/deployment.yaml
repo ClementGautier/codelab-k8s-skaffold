@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: k8s-skaffold-frontend
+        imagePullPolicy: Never
+        env:
+        - name: REACT_APP_BACKEND_URL
+          value: http://localhost:8000
+        ports:
+        - containerPort: 3000

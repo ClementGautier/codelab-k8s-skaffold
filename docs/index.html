@@ -1,0 +1,269 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Kubernetes ready microservices app with Skaffold</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/codelab-elements/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14"></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  id="k8s-skaffold"
+                  title="Kubernetes ready microservices app with Skaffold"
+                  environment="web"
+                  feedback-link="https://github.com/ClementGautier/codelab-k8s-skaffold/issues">
+    
+      <google-codelab-step label="Introduction" duration="3">
+        <p class="image-container"><img style="width: 338.00px" src="img/8938d9ef03ba5512.png"></p>
+<h2 is-upgraded><strong>The inner loop</strong></h2>
+<p>Welcome to this CodeLabs where we will dig into the concept of the Inner Loop in development in a containerized environment and how we can use Skaffold to speed up this loop.</p>
+<p>The inner loop can vary a lot depending on the stack you are working on but, usually, it starts with you making a change in the codebase, then somewhat building some assets, trying out your change, iterating on that loop for a while then committing and pushing your code. Once your code is pushed it can go to the outer loop (peer review, continuous integration, tagging, etc.). </p>
+<p class="image-container"><img style="width: 624.00px" src="img/71d6fc6701867a4f.png"></p>
+<p><em>Image from Mitch Denny&#39;s blog. </em></p>
+<p>I didn&#39;t find who was the first to introduce the concept of inner loop but it&#39;s usually there that people draw a line in their responsibility with a code change. Arguing that the outer loop needs to be handled by an ops team.</p>
+<p>Fortunately more and more people are embracing devops practices and are willing to improve their <a href="https://12factor.net/dev-prod-parity" target="_blank">dev/prod parity</a></p>
+<p>This codelabs is an attempt at implementing an inner loop that makes the development team aware of their responsibility by enabling them to have a similar setup than the production area to minimize the time to market of modern applications.</p>
+<h2 is-upgraded><strong>What you&#39;ll build</strong></h2>
+<p>In this CodeLab we will: </p>
+<ul>
+<li>Deploy a containerized microservices application locally in a Kubernetes cluster</li>
+<li>Integrate skaffold to speed up the inner loop</li>
+<li>Package our application using a Helm chart</li>
+<li>Make our application production ready</li>
+</ul>
+<p>I want to emphasize that you should take your time to play with each tool on your own. I&#39;ll guide you during this code lab through a path but you can totally make stops at any step to dig deeper into each component.</p>
+<h2 class="checklist" is-upgraded><strong>What you&#39;ll learn</strong></h2>
+<ul class="checklist">
+<li>How to use Skaffold</li>
+<li>How to use hot reload to increase your productivity</li>
+<li>Make your application production ready</li>
+</ul>
+<h2 is-upgraded><strong>What you&#39;ll need</strong></h2>
+<p>You will mainly need a Kubernetes cluster. While it&#39;s totally ok to use any cloud provided Kubernetes cluster like GKE, I would recommend using Minikube to mimic the inner loop as closely as possible: as a developer you probably don&#39;t want to rely on the internet to make progress on your app.</p>
+<p>You will also need the Skaffold and Helm binaries and Docker (Minikube includes Docker) for the first part. We will use the docker binary directly in order to demonstrate the starting point of inner loop.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Getting set up" duration="10">
+        <h2 is-upgraded><strong>Setup the requirements</strong></h2>
+<p>You will need to install:</p>
+<ul>
+<li>Kubectl: <a href="https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-on-linux" target="_blank">https://kubernetes.io/docs/tasks/tools/install-kubectl</a></li>
+<li>Minikube: <a href="https://kubernetes.io/docs/tasks/tools/install-minikube/" target="_blank">https://kubernetes.io/docs/tasks/tools/install-minikube/</a></li>
+<li>Helm: <a href="https://helm.sh/docs/using_helm/#installing-helm" target="_blank">https://helm.sh/docs/using_helm/#installing-helm</a></li>
+<li>Skaffold: <a href="https://skaffold.dev/docs/getting-started/" target="_blank">https://skaffold.dev/docs/getting-started/</a></li>
+</ul>
+<p>They can all be simply grabbed as simple binaries or through a package manager depending on your setup. I&#39;d recommend downloading the binary directly as the package for your distribution might be slightly outdated.</p>
+<h2 is-upgraded><strong>Configuring the cluster</strong></h2>
+<p>Once you&#39;ve setup Minikube you should be able to start it:</p>
+<pre>$ minikube start
+😄  minikube v1.2.0 on linux (amd64)
+💡  Tip: Use &#39;minikube start -p &lt;name&gt;&#39; to create a new cluster, or &#39;minikube delete&#39; to delete this one.
+🔄  Restarting existing virtualbox VM for &#34;minikube&#34; ...
+⌛  Waiting for SSH access ...
+🐳  Configuring environment for Kubernetes v1.15.0 on Docker 18.09.6
+🔄  Relaunching Kubernetes v1.15.0 using kubeadm ... 
+⌛  Verifying: apiserver proxy etcd scheduler controller dns
+🏄  Done! kubectl is now configured to use &#34;minikube&#34;</pre>
+<p>Also, in order to use the same docker socket when you build docker images using the docker CLI, you have to configure your docker environment to use minikube&#39;s one:</p>
+<pre>eval $(minikube docker-env)</pre>
+<aside class="warning"><p><strong>Caution:</strong> These commands need to be run on every terminal you open that needs to access the docker api directly. You probably want to persist this configuration on your system if you use it often.</p>
+</aside>
+<h2 is-upgraded><strong>Configuring helm</strong></h2>
+<p>Helm needs to setup a server component on the cluster, named Tiller. Do it with the following command:</p>
+<pre>helm init</pre>
+<h2 is-upgraded><strong>Get the code</strong></h2>
+<p>The code that we will use in this CodeLab is available on my Github account, download it using the following command: </p>
+<pre>git clone git@github.com:ClementGautier/codelab-k8s-skaffold-helm.git</pre>
+<p>You can also download it directly from here:</p>
+<p><a href="https://github.com/ClementGautier/codelab-k8s-skaffold/archive/master.zip" target="_blank"><paper-button class="colored" raised><iron-icon icon="cloud_download"></iron-icon>Download the code</paper-button></a></p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Establish a baseline" duration="10">
+        <h2 is-upgraded><strong>What&#39;s our starting point?</strong></h2>
+<p>As you fetched the code you might have realized that the application looks pretty &#34;light&#34;. In fact it is composed of a single page app written in JavaScript (React) that makes a call to the backend API written in Python (Starlette) and displays the result. </p>
+<p>Our first goal will be to:</p>
+<ul>
+<li>Deploy the project locally</li>
+<li>Fix a bug (in order to see how we can debug the app)</li>
+</ul>
+<h2 is-upgraded><strong>Old school inner loop</strong></h2>
+<h3 is-upgraded><strong>Starting things</strong></h3>
+<p>Now that you have the source code we can start playing with it. Launching the app should be as easy as a kubectl apply... but wait, we need to build the images first:</p>
+<pre>docker build -t k8s-skaffold-backend backend
+docker build -t k8s-skaffold-frontend frontend</pre>
+<p>Then you will need to deploy the services in your local cluster using the following commands:</p>
+<pre>kubectl apply -f backend/k8s
+kubectl apply -f frontend/k8s</pre>
+<p>Then, in order to actually see the application you will need to forward the service port on your host machine (in two different terminals):</p>
+<pre>kubectl port-forward service/backend 8000
+kubectl port-forward service/frontend 3000</pre>
+<p>After that you should be able to see the app in your browser at the URL <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></p>
+<h3 is-upgraded><strong>Observing things</strong></h3>
+<p>You can see a piece of JSON: this information comes from the backend itself. Going to the following URL <a href="http://127.0.0.1:3000/version" target="_blank">http://127.0.0.1:3000/version</a> you can see that there is an issue that we need to fix: the version should be displayed.</p>
+<pre>Backend version:</pre>
+<p>Should definitely be </p>
+<pre>Backend version: 1</pre>
+<p>Having a look at the container logs on the frontend side you can&#39;t see much as the issue happens on the client side:</p>
+<pre>127.0.0.1 - - [06/Aug/2019:14:13:17 +0000] &#34;GET / HTTP/1.1&#34; 200 2010 &#34;-&#34; &#34;Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36&#34; &#34;-&#34;</pre>
+<p>But, looking at the backend container we can see something weird:</p>
+<pre>127.0.0.1 - - [02/Aug/2019 14:12:57] &#34;GET /vesrion HTTP/1.1&#34; 404 -</pre>
+<p>It definitely looks like a typo in the URL to fetch the version. Let&#39;s fix that.</p>
+<h3 is-upgraded><strong>Fixing the bug</strong></h3>
+<p>This part will probably be unpleasant but here we are: try doing it on your own! It should not be hard, we diagnosed that it is a typo on the frontend code calling the backend. I want you to experience first hand what it takes to test a fix with this setup.</p>
+<p>Hint: you need to:</p>
+<ul>
+<li>Change the route path inside the file frontend/src/pages/Version.js</li>
+<li>Rebuild your docker image</li>
+<li>Stop your port forwarding</li>
+<li>Delete your currently running pod</li>
+<li>Start the pod again</li>
+<li>Start your port forwarding</li>
+<li>Finally refresh the page</li>
+</ul>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="What is Skaffold" duration="10">
+        <p>As you probably noticed, having to rebuild the docker image by hand each time we want to test a change is pretty frustrating. The fact that we also need to port forward on our local host on specific port isn&#39;t really portable and takes time to restart when the pod changes. </p>
+<p>An important point to keep in mind is that the docker images we use should be production ready, thus usually provide less logging or debugging potential than your usual environment. This the main caveat that docker users face when it comes to dev/prod parity.</p>
+<p>The goal of Skaffold is to automate the inner loop. It will watch the source code for any change, rebuild the docker images when needed and update the Kubernetes deployment to use the latest source code.</p>
+<h2 is-upgraded><img style="width: 624.00px" src="img/c3365b080002a1d.png"></h2>
+<p>I have already setup the configuration files of Skaffold for you but we will take some minutes now to review the parameters: open the file skaffold.yaml located at the root of the source code.</p>
+<h2 is-upgraded><strong>Profiles</strong></h2>
+<p>The first thing that you can see is that we describe &#34;profiles&#34; inside this configuration. We are using profiles in this case to switch between dev mode (hot reload/fast inner loop) and prod mode (nginx, no debug). </p>
+<p>There are two approaches when it comes to development docker images, you can use different docker images or use multistage.</p>
+<p>The dev profile of the backend application in this example is configured to make use of a specific docker stage (named target) and reflect the multistage strategy (even if in this specific case the content of the Dockerfile doesn&#39;t really make good use of the multistage process, it&#39;s more a proof of concept rather than a perfect Dockerfile).</p>
+<p>The dev profile of the frontend application, on the other hand, makes use of a totally different Dockerfile. Both approaches have pros and cons, pick the one that feels right for your use case.</p>
+<p>Look at the Dockerfiles now to see the difference between the stages. You will see that each profile answers specific needs like hot reload for development environment.</p>
+<h2 is-upgraded><strong>Builders</strong></h2>
+<p>Each profile defines its builder. We use the default &#34;docker&#34; builder but keep in mind that there are other solutions like Google Cloud Build, maven, bazel and more.</p>
+<p>You can see that, in the dev profile, we also use the sync builder that will <strong>synchronize files automatically</strong>, allowing us to do hot reload without needing to rebuild the whole container. This is a big advantage of using skaffold!</p>
+<h2 is-upgraded><strong>Deployers</strong></h2>
+<p>Each profile also defines it&#39;s deployer. This describes the &#34;how&#34; to respond to a code change. You can see that we are using kubectl in dev and helm in prod. We could also have used kustomize instead.</p>
+<h2 is-upgraded><strong>Port forwarding</strong></h2>
+<p>Finally, the port forwarding section allows us to define which service we would like to have exposed directly on our host. This will fasten the inner loop we experienced by doing that part automatically and also act as a way of unifying process in your team.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Skaffold in action" duration="10">
+        <p>Now that you are familiar with the profilessetup, launch the app using the following command:</p>
+<pre>skaffold dev --profile dev --port-forward</pre>
+<p>You can see that this will rebuild your docker images but only the stages specified by the dev profile and using the specified dockerfiles. You will then be prompted the port used for the port forward:</p>
+<pre>Port forwarding service/frontend in namespace default, remote port 3000 -&gt; local port 3000
+Port forwarding service/backend in namespace default, remote port 8000 -&gt; local port 8000</pre>
+<p>You can now open your browser and go to <a href="http://localhost:4503/" target="_blank">http://localhost:3000/</a> and you should see the application.</p>
+<aside class="special"><p><strong>Note:</strong> &#34;skaffold dev&#34; doesn&#39;t hang up and displays the logs of what it deployed: this is super useful for debugging purposes. If you want the same log aggregation on a Kubernetes cluster without Skaffold, have a look at stern: <a href="https://github.com/wercker/stern" target="_blank">https://github.com/wercker/stern</a></p>
+</aside>
+<h2 is-upgraded><strong>The new loop</strong></h2>
+<p>Now that our app is managed with Skaffold, try modifying the backend or frontend and see what happens: </p>
+<p>Put back the bug we had in the first section: modify the version component in the frontend so that it targets an unknown path on the backend.</p>
+<p>You can see that, right after you save your file, there is a file sync happening and a hot reload of your frontend development server. Here are the bugfix logs:</p>
+<pre>[backend-55b85f75c5-rx9zh backend] INFO: (&#39;127.0.0.1&#39;, 41574) - &#34;GET /vesrion HTTP/1.1&#34; 404
+Syncing 1 files for k8s-skaffold-frontend:6f1f2cae47837aa4cecb0e3a7342b27df29ec0744cf3b62a6a318af9c4824ed5
+Watching for changes...
+[frontend-7688ff79f8-nlwnv frontend] Compiled successfully!
+[backend-55b85f75c5-rx9zh backend] INFO: (&#39;127.0.0.1&#39;, 41710) - &#34;GET /version HTTP/1.1&#34; 200</pre>
+<p>This happened without a docker rebuild: it is the fastest we can get to a non containerized environment.</p>
+<p>You can try the same thing on the backend application: try modifying the version on the version.py file (you can even try to generate a runtime error to see what it is like to have the application in a debug mode!)</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Production grade package" duration="20">
+        <p>Having a really fast inner loop with a containerized environment feels great but what we want in the end is to be production ready! In this section we will see how you can configure your environment to be as close to the production environment as possible.</p>
+<p>In this section we will use the helm deployer to showcase what it&#39;s like to use a packaging solution with Skaffold. I recommend, if possible, using the same deployer strategy between your dev mode and prod mode as it will help you spot deployment issues as soon as possible.</p>
+<h2 is-upgraded><strong>Ingress setup</strong></h2>
+<p>In order to deploy the application like you would on production you want to use an Ingress controller that acts as a reverse proxy and not rely on port forwarding. In order to do so with minikube you will need to enable the ingress plugin as follows:</p>
+<pre>minikube addons enable ingress</pre>
+<p>This will provision an nginx ingress controller and let you use Ingress&#39; resources like you would in a live environment. You will also need to point the DNS record to your cluster IP. You can do that simply by adding the minikube IP to the hosts file:</p>
+<pre>echo &#34;$(minikube ip) k8s-skaffold-frontend.local k8s-skaffold-backend.local&#34; | sudo tee -a /etc/hosts</pre>
+<p>Once that&#39;s set up, you should be able to run skaffold prod profile:</p>
+<pre>skaffold dev --profile prod </pre>
+<p>After a short time you should be able to access the application at the following locations:</p>
+<ul>
+<li><a href="http://k8s-skaffold-frontend.local/" target="_blank">http://k8s-skaffold-frontend.local/</a></li>
+<li><a href="http://k8s-skaffold-backend.local/" target="_blank">http://k8s-skaffold-backend.local/</a></li>
+</ul>
+<p>Note that this profile doesn&#39;t make use of file syncing or hot reload because the images are optimized for production usage. You can still perform updates and it will trigger a build and deploy process since we use the &#34;skaffold dev&#34; command but it will rebuild the docker images thus taking more time. </p>
+<p>This is the tradeoff of using the same environment as the production one, but at least you have the ability to switch to dev mode if you need a faster inner loop.</p>
+<p>Try updating the code and see the difference with the dev profile.</p>
+<h2 is-upgraded><strong>Resilience</strong></h2>
+<p>The helm package is designed for production usage: the deployments are replicated so that you don&#39;t encounter downtime, which is always nice to have.</p>
+<p>It&#39;s a good opportunity for you to test that: while pinging your frontend try to trigger a change. In a terminal launch the following command:</p>
+<pre>watch -t -n 0.1 curl -s http://k8s-skaffold-backend.local/version</pre>
+<p>This will curl the backend every 100ms and display the result.</p>
+<p>Try it on your own: make a change on the backend version.py file: you shouldn&#39;t get any 404s ;)</p>
+<p>Note: you will also see that during the deployment since there are multiple frontends, you will get randomly the new and old result: this is a proof that the rolling update is working properly.</p>
+<h2 is-upgraded><strong>Connecting to the outer loop</strong></h2>
+<p>Until now we used only one command: `skaffold dev`. This is the main command you will use to work with hot reload but considering that we could use Skaffold in our outer loop (using a continuous integration system for example) or directly to deploy our app on another cluster it makes sense to have more control over the workflow.</p>
+<p>There are three commands that you should know:</p>
+<h3 is-upgraded><strong>Build</strong></h3>
+<p>The &#34;skaffold build&#34; command allows you to... build the artifacts defined in the Skaffold configuration file. This is useful if you want to simply build your docker images and push them on a registry for example.</p>
+<p>This step could easily be a step on its own in a CI pipeline or simply be used to control that the artifacts are buildable.</p>
+<h3 is-upgraded><strong>Deploy</strong></h3>
+<p>The skaffold deploy command will deploy the latest artifacts that were built. Basically, in a continuous integration process you might want to make a pause before this step for a manual check first. </p>
+<h3 is-upgraded><strong>Run</strong></h3>
+<p>The skaffold run command combines the build and deploy commands. It is, basically, the dev command without the file watcher. This command is very powerful combined with the &#34;--tail&#34; option, allowing to display the logs of everything deployed by skaffold.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Tear down" duration="1">
+        <p>If you used minikube you can simply run the following command in order to destroy your cluster and everything deployed on it:</p>
+<pre>minikube delete</pre>
+<p>If you want to keep your cluster running and remove everything Skaffold deployed, you can use the following command:</p>
+<pre>skaffold delete --profile dev
+skaffold delete --profile prod</pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Congratulations" duration="1">
+        <p>Congratulations on completing this course! I hope it helped you understand the benefits of Skaffold and hopefully increase your productivity in the future.</p>
+<h2 is-upgraded><strong>What&#39;s next?</strong></h2>
+<p>If you want to go further, I highly recommend the Skaffold documentation. There is, for example, an entire topic that we did not cover: the skaffold debug command which determines the underlying technology of your docker image and configures your development environment accordingly. </p>
+<p>Another topic we did not discuss is the Testers: they allow you to add checks in your skaffold loop to enforce the container file structure using <a href="https://github.com/GoogleContainerTools/container-structure-test" target="_blank">container-structure-test</a>. This is another powerful way to standardize the way you work with containers.</p>
+<p>Also, if you had any issue doing this codelab, please open an issue on the github repository:</p>
+<p><a href="https://github.com/ClementGautier/codelab-k8s-skaffold/issues/new" target="_blank"><paper-button class="colored" raised>Open an issue</paper-button></a></p>
+<h2 is-upgraded><strong>Further reading</strong></h2>
+<ul>
+<li><a href="https://mitchdenny.com/the-inner-loop/" target="_blank">The inner loop</a></li>
+<li><a href="https://12factor.net/dev-prod-parity" target="_blank">https://12factor.net/dev-prod-parity</a></li>
+</ul>
+<h2 is-upgraded><strong>Reference docs</strong></h2>
+<ul>
+<li><a href="https://skaffold.dev/docs/" target="_blank">Skaffold docs</a></li>
+</ul>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/codelab-elements/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/prettify.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/codelab-elements.js"></script>
+
+</body>
+</html>
