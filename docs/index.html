@@ -109,7 +109,7 @@
 <p>Now that you have the source code we can start playing with it. Launching the app should be as easy as a kubectl apply... but wait, we need to build the images first:</p>
 <pre>docker build -t k8s-skaffold-backend backend
 docker build -t k8s-skaffold-frontend frontend</pre>
-<p>Then you will need to deploy the services in your local cluster using the following commands:</p>
+<p>Then you will need to deploy the services in your local cluster. We will do so using the kubectl command line that send to the Kubernetes cluster through the ApiServer the desired state of our application:</p>
 <pre>kubectl apply -f backend/k8s
 kubectl apply -f frontend/k8s</pre>
 <p>Then, in order to actually see the application you will need to forward the service port on your host machine (in two different terminals):</p>
@@ -130,7 +130,7 @@ kubectl port-forward service/frontend 3000</pre>
 <p>This part will probably be unpleasant but here we are: try doing it on your own! It should not be hard, we diagnosed that it is a typo on the frontend code calling the backend. I want you to experience first hand what it takes to test a fix with this setup.</p>
 <p>Hint: you need to:</p>
 <ul>
-<li>Change the route path inside the file frontend/src/pages/Version.js</li>
+<li>Change the route path inside the file frontend/src/components/Version.js</li>
 <li>Rebuild your docker image</li>
 <li>Stop your port forwarding</li>
 <li>Delete your currently running pod</li>
@@ -138,6 +138,14 @@ kubectl port-forward service/frontend 3000</pre>
 <li>Start your port forwarding</li>
 <li>Finally refresh the page</li>
 </ul>
+<h3 is-upgraded><strong>Tear down</strong></h3>
+<p>After this first look at our baseline, and before using skaffold, you might want to cleanup your cluster and stop the running port-forwarding:</p>
+<ul>
+<li>Close the port-forwarding with a Ctrl+C on the terminals</li>
+<li>Remove the deployed services and pods using the following commands:</li>
+</ul>
+<pre>kubectl delete -f backend/k8s
+kubectl delete -f frontend/k8s</pre>
 
 
       </google-codelab-step>

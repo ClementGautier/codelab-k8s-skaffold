@@ -8,10 +8,10 @@ profiles:
         context: backend
         docker:
           target: development
-        sync:
-          manual:
-          - src: src/*.py
-            dest: .
+        sync: # Local files synced to pods instead of triggering an image build when modified.
+          manual: # Manual sync rules indicating the relative source and destination.
+          - src: src/*.py # A glob pattern to match local paths against. Directories should be delimited by / on all platforms.
+            dest: . # Destination path in the container where the files should be synced to.
 
       - image: k8s-skaffold-frontend
         context: frontend
