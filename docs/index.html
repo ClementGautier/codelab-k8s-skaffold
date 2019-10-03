@@ -204,7 +204,7 @@ Watching for changes...
 <p>In order to deploy the application like you would on production you want to use an Ingress controller that acts as a reverse proxy and not rely on port forwarding. In order to do so with minikube you will need to enable the ingress plugin as follows:</p>
 <pre>minikube addons enable ingress</pre>
 <p>This will provision an nginx ingress controller and let you use Ingress&#39; resources like you would in a live environment. You will also need to point the DNS record to your cluster IP. You can do that simply by adding the minikube IP to the hosts file:</p>
-<pre>echo &#34;$(minikube ip) k8s-skaffold-frontend.local k8s-skaffold-backend.local&#34; | sudo tee -a /etc/hosts</pre>
+<pre>echo -e &#34;\n$(minikube ip) k8s-skaffold-frontend.local k8s-skaffold-backend.local&#34; | sudo tee -a /etc/hosts</pre>
 <p>Once that&#39;s set up, you should be able to run skaffold prod profile:</p>
 <pre>skaffold dev --profile prod </pre>
 <p>After a short time you should be able to access the application at the following locations:</p>
